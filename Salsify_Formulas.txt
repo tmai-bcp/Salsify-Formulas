@@ -1,0 +1,1130 @@
+#Starting Bid#
+#Sets Starting Bid equal to seller cost#
+VALUE("Seller Cost")
+##
+
+#Height#
+#Sets height equal to height 1#
+VALUE("Height 1")
+##
+
+#Length#
+#Sets length equal to length 1#
+VALUE("Length 1")
+##
+
+#Width#
+#Sets width equal to width 1#
+VALUE("Width 1")
+##
+
+#Flag#
+#Sets flag to NoFlag#
+AT("NoFlag", 1)
+##
+
+#Manufacturer#
+#Sets manufacturer to Best Choice Products#
+CONCATENATE("Best Choice Products")
+##
+
+#Brand#
+#Sets brand to Best Choice Products#
+CONCATENATE("Best Choice Products")
+##
+
+#Condition#
+#Sets condition to new#
+CONCATENATE("New")
+##
+
+#Warranty#
+#Sets warranty to 60 days#
+AT("60 Day Warranty", 1)
+##
+
+#Labels#
+#Adds all labels to the labels field#
+let all_labels =  CONCAT_ARRAYS( "Buy.com", "Jet", "Newegg", "Sears", "Walmart",
+  "All Inventory") in
+all_labels
+##
+
+#Classification#
+#Sets classification to all items classification#
+AT("All Items Classification", 1)
+##
+
+#Color#
+#Sets color to Amazon color#
+VALUE("Amazon Color")
+##
+
+#Jet Color#
+#Sets Jet color to Amazon color#
+VALUE("Amazon Color")
+##
+
+#Jet Height#
+#Sets Jet height to height 1#
+VALUE("Height 1")
+##
+
+#Jet Length#
+#Sets Jet length to length 1#
+VALUE("Length 1")
+##
+
+#Jet Width#
+#Sets Jet width to width 1#
+VALUE("Width 1")
+##
+
+#Newegg Color#
+#Sets Newegg color to Amazon color#
+VALUE("Amazon Color")
+##
+
+#Newegg Height#
+#Sets Newegg height to height 1#
+VALUE("Height 1")
+##
+
+#Newegg Length#
+#Sets Newegg length to length 1#
+VALUE("Length 1")
+##
+
+#Newegg Width#
+#Sets Newegg width to width 1#
+VALUE("Width 1")
+##
+
+#Sear height#
+#Sets Sear height to height 1#
+VALUE("Height 1")
+##
+
+#Sear length#
+#Sets Sear length to length 1#
+VALUE("Length 1")
+##
+
+#Sears Color#
+#Sets Sears color to Amazon color#
+VALUE("Amazon Color")
+##
+
+#Sears Height#
+#Sets Sears height to height 1#
+VALUE("Height 1")
+##
+
+#Sears Width#
+#Sets Sears width to width 1#
+VALUE("Width 1")
+##
+
+#Walmart Length#
+#Sets Walmart length to length 1#
+VALUE("Length 1")
+##
+
+#Walmart Width#
+#Sets Walmart width to width 1#
+VALUE("Width 1")
+##
+
+#SKU-Summary#
+#Trims the Auction Title to 60 characters#
+LTRIM(VALUE("Auction Title"), 60)
+##
+
+#Product Title#
+#Sets title to auction title#
+VALUE("Auction Title")
+##
+
+#Product Color#
+#Sets product color to Amazon color#
+VALUE("Amazon Color")
+##
+
+#Estimated Profit Margin#
+#Calculates the estimated profit margin based on unit cost, duties, SKUs per container, seller cost, and outbound shipping price#
+let new_sku_x = MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))) in
+let new_sku_y = DIVIDE("3950", VALUE("SKUs per container")) in
+let existing_sku_x = MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))) in
+let existing_sku_y = DIVIDE("3950", VALUE("SKUs per container")) in
+let is_new_sku = IF(OR(GT(VALUE("Item Create Date"), "2017-10-29"), EQUAL(VALUE("Item Create Date"), NULL)), true, false) in
+
+let new_sku_profit_margin = ROUND(DIVIDE(SUBTRACT(MULTIPLY(VALUE("Seller Cost"),
+  SUBTRACT("1", ".15")), ADD(ADD(new_sku_x, new_sku_y), 
+    VALUE("Outbound Shipping Price"))), VALUE("Seller Cost")), 4) in
+    
+let existing_sku_profit_margin = ROUND(DIVIDE(SUBTRACT(MULTIPLY(VALUE("Seller Cost"),
+  SUBTRACT("1", ".15")), ADD(ADD(existing_sku_x, existing_sku_y), 
+    VALUE("Outbound Shipping Price"))), VALUE("Seller Cost")), 4) in     
+    
+let profit_margin = IF(EQUAL(is_new_sku, true), new_sku_profit_margin, existing_sku_profit_margin) in
+
+#profit_margin
+IF(EQUAL(profit_margin, NULL), "",CONCATENATE(ROUND(MULTIPLY(profit_margin,100), 2), "%"))
+##
+
+#Margin Threshold#
+#Checks whether the margin will pass or fail the 20% profit margin threshold#
+let new_sku_profit_margin = DIVIDE(SUBTRACT(MULTIPLY(VALUE("Seller Cost"),SUBTRACT("1", ".15")), 
+  ADD(ADD(MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))), 
+  DIVIDE("3950", VALUE("SKUs per container"))), VALUE("Outbound Shipping Price"))), VALUE("Seller Cost")) in
+
+let existing_sku_profit_margin = DIVIDE(SUBTRACT(MULTIPLY(VALUE("Seller Cost"),SUBTRACT("1", ".15")), 
+  ADD(ADD(MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))), 
+  DIVIDE("3950", VALUE("SKUs per container"))), VALUE("Outbound Shipping Price"))), VALUE("Seller Cost")) in
+  
+let is_new_sku = IF(OR(GT(VALUE("Item Create Date"), "2017-10-29"), EQUAL(VALUE("Item Create Date"), NULL)), true, false) in
+
+let estimated_profit_margin = IF(EQUAL(is_new_sku, true), new_sku_profit_margin, existing_sku_profit_margin) in
+
+let profit_margin = ROUND(MULTIPLY(estimated_profit_margin, "100"), 0) in 
+let needs_approval = IF(AND(GT(profit_margin,"10"), LT(profit_margin, "20")), true, false) in
+
+let margin_threshold = IF(GT(profit_margin, "20"), "Pass - Approved", 
+  IF(EQUAL(needs_approval, true), "Needs Approval","FAIL")) in
+  
+IF(EQUAL(is_new_sku, true), margin_threshold, NULL)
+##
+
+#Landed Cost#
+#Calculates the landed cost based on unit cost, duties, and SKUs per container#
+let new_sku_x = MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))) in
+let new_sku_y = DIVIDE("3950", VALUE("SKUs per container")) in
+
+let existing_sku_x = MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))) in
+let existing_sku_y = DIVIDE("3950", VALUE("SKUs per container")) in
+
+let is_new_sku = IF(OR(GT(VALUE("Item Create Date"), "2017-10-29"), EQUAL(VALUE("Item Create Date"), NULL)), true, false) in
+
+let landed_cost = IF(EQUAL(is_new_sku, true), ROUND(ADD(new_sku_x, new_sku_y), 2), 
+  ROUND(ADD(existing_sku_x, existing_sku_y), 2)) in
+
+#landed_cost
+TEXT(landed_cost,"0.00")
+##
+
+#NEW SKU- Sample receive date:#
+#Asks for the saple receive date if sample ordered is marked yes#
+IF(EQUAL(VALUE("Sample ordered:"), "Yes"), VALUE("Sample receive date:"), NULL)
+##
+
+#MARKETPLACE LONG TITLE#
+#Removes special characters from auction title and adds Best Choice Products to the front of auction title if it doesn't already exist#
+let desc = SUBSTITUTE(VALUE("Auction Title"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+let desc = SUBSTITUTE(desc, "_x000D_", "\n") in
+
+let desc = STRIP_HTML(CLEAN_TEXT(desc)) in
+
+let title = UPPER(desc) in
+let title = SUBSTITUTE(title, "BCP", "") in
+ let is_title_null = IF(EQUAL(title, NULL), true, false) in
+
+let title = IF(NOT(CONTAINS(title, "BEST CHOICE PRODUCTS")), 
+    CONCATENATE("Best Choice Products ", desc),
+    desc) in
+
+IF(EQUAL(is_title_null, true), NULL, title)
+##
+
+#Amazon Product ID#
+#Makes the UPC the Amazon product ID#
+VALUE("UPC")
+##
+
+#Standard Price#
+#Sets seller cost as the standard price#
+VALUE("Seller Cost")
+##
+
+#Amazon Height#
+#Sets to height 1#
+VALUE("Height 1")
+##
+
+#Amazon Length#
+#Sets to length 1#
+VALUE("Length 1")
+##
+
+#Amazon Width#
+#Sets to width 1#
+VALUE("Width 1")
+##
+
+#Main Image URL#
+#Sets to ITEMIMAGEURL2#
+VALUE("ITEMIMAGEURL2")
+##
+
+#Amazon Package Height#
+#Sets to height 1#
+VALUE("Height 1")
+##
+
+#Amazon Package Width#
+#Sets to width 1#
+VALUE("Width 1")
+##
+
+#Amazon Package Length#
+#Sets to length 1#
+VALUE("Length 1")
+##
+
+#Amazon Warranty Description#
+#Adds warranty statement to Amazon Warranty Description#
+CONCATENATE(“60 DAY WARRANTY: All returns are shipped back to a Best Choice Products Return Center at the customer's expense within 60 days of delivery; however, we will send a pre-paid return shipping label via email if the return is a result of our error. Please note that it is at the company's discretion to decide if the item may be returned to a Best Choice Products Return Center. Unauthorized returns may not be accepted. Once your claim is processed and approved, please allow 5-7 business days for the request to be completed. If a replacement unit or replacement parts are requested, please be aware that the fulfillment time-frame is based on product availability.”)
+##
+
+#Amazon Features#
+#Adds Amazon features#
+CONCAT_ARRAYS(VALUE("Amazon Feature 1"), VALUE("Amazon Feature 2"), VALUE("Amazon Feature 3"), VALUE("Amazon Feature 4"), VALUE("Amazon Feature 5"))
+##
+
+#Amazon Keywords#
+#Adds Amazon keywords and cuts it down to 250 characters#
+LTRIM(
+  CONCAT_ARRAY(
+    VALUE("Amazon Keyword 1"), 
+    VALUE("Amazon Keyword 2"), 
+    VALUE("Amazon Keyword 3"),
+    VALUE("Amazon Keyword 4"),
+    VALUE("Amazon Keyword 5")), 
+  250)
+##
+
+#Battery Types#
+#Joins all battery types in a list#
+CONCAT_ARRAY(VALUE("Battery Type1"),VALUE("Battery Type2"),VALUE("Battery Type3"))
+##
+
+#Number of Batteries#
+#Joins the number of batteries in a list#
+CONCAT_ARRAY(VALUE("Number of Batteries1"),VALUE("Number of Batteries2"),VALUE("Number of Batteries3"))
+##
+
+#Target Audiences#
+#Adds the target audiences to a list#
+CONCAT_ARRAY(VALUE("Target Audience1"),VALUE("Target Audience2"),VALUE("Target Audience3"))
+##
+
+#Dimension Check#
+#Checks that length is greater than width and height; width is greater than height; length is less than 108 inches; weight is less than 150 lbs.#
+let vol = ADD(VALUE("Length 1"),MULTIPLY(VALUE("Height 1"), 2),MULTIPLY(VALUE("Width 1"),2)) in
+let vol_threshold = 165 in
+let len_cap = 108 in
+let WWeight_threshold = 150 in
+let box1 = IF(LT(VALUE("Length 1"), VALUE("Width 1")), "ERROR Length 1 is less than Width 1! WILL NOT PUSH TO NS!", 
+  IF(LT(VALUE("Length 1"), VALUE("Height 1")), "ERROR Length 1 is less than Height 1!  WILL NOT PUSH TO NS!",
+    IF(LT(VALUE("Width 1"), VALUE("Height 1")), "ERROR Width 1 is less than Height 1!  WILL NOT PUSH TO NS!",
+       IF(GT(vol, vol_threshold), "FAIL - Dimensions would cause oversized box!  WILL NOT PUSH TO NS!", 
+          IF(GT(VALUE("Length 1"), len_cap), "ERROR - Length 1 is greater than 108 inches!  WILL NOT PUSH TO NS!",
+            IF(GT(VALUE("WWeight 1"), WWeight_threshold), "FAIL - WWeight 1 exceeds 150 lbs!  WILL NOT PUSH TO NS!", "PASS")))))) in
+
+let vol = ADD(VALUE("Length 2"),MULTIPLY(VALUE("Height 2"), 2),MULTIPLY(VALUE("Width 2"),2)) in
+let vol_threshold = 165 in
+let len_cap = 108 in
+let WWeight_threshold = 150 in
+let box2 = IF(LT(VALUE("Length 2"), VALUE("Width 2")), "ERROR Length 2 is less than Width 2! WILL NOT PUSH TO NS!", 
+  IF(LT(VALUE("Length 2"), VALUE("Height 2")), "ERROR Length 2 is less than Height 2!  WILL NOT PUSH TO NS!",
+    IF(LT(VALUE("Width 2"), VALUE("Height 2")), "ERROR Width 2 is less than Height 2!  WILL NOT PUSH TO NS!",
+       IF(GT(vol, vol_threshold), "FAIL - Dimensions would cause oversized box!  WILL NOT PUSH TO NS!", 
+          IF(GT(VALUE("Length 2"), len_cap), "ERROR - Length 2 is greater than 108 inches!  WILL NOT PUSH TO NS!",
+            IF(GT(VALUE("WWeight 2"), WWeight_threshold), "FAIL - WWeight 2 exceeds 150 lbs!  WILL NOT PUSH TO NS!", "PASS")))))) in
+
+let vol = ADD(VALUE("Length 3"),MULTIPLY(VALUE("Height 3"),2),MULTIPLY(VALUE("Width 3"),2)) in
+let vol_threshold = 165 in
+let len_cap = 108 in
+let WWeight_threshold = 150 in
+let box3 = IF(LT(VALUE("Length 3"), VALUE("Width 3")), "ERROR Length 3 is less than Width 3! WILL NOT PUSH TO NS!", 
+  IF(LT(VALUE("Length 3"), VALUE("Height 3")), "ERROR Length 3 is less than Height 3!  WILL NOT PUSH TO NS!",
+    IF(LT(VALUE("Width 3"), VALUE("Height 3")), "ERROR Width 3 is less than Height 3!  WILL NOT PUSH TO NS!",
+       IF(GT(vol, vol_threshold), "FAIL - Dimensions would cause oversized box!  WILL NOT PUSH TO NS!", 
+          IF(GT(VALUE("Length 3"), len_cap), "ERROR - Length 3 is greater than 108 inches!  WILL NOT PUSH TO NS!",
+            IF(GT(VALUE("WWeight 3"), WWeight_threshold), "FAIL - WWeight 3 exceeds 150 lbs!  WILL NOT PUSH TO NS!", "PASS")))))) in
+
+let vol = ADD(VALUE("Length 4"),MULTIPLY(VALUE("Height 4"),2),MULTIPLY(VALUE("Width 4"),2)) in
+let vol_threshold = 165 in
+let len_cap = 108 in
+let WWeight_threshold = 150 in
+let box4 = IF(LT(VALUE("Length 4"), VALUE("Width 4")), "ERROR Length 4 is less than Width 4! WILL NOT PUSH TO NS!", 
+  IF(LT(VALUE("Length 4"), VALUE("Height 4")), "ERROR Length 4 is less than Height 4!  WILL NOT PUSH TO NS!",
+    IF(LT(VALUE("Width 4"), VALUE("Height 4")), "ERROR Width 4 is less than Height 4!  WILL NOT PUSH TO NS!",
+       IF(GT(vol, vol_threshold), "FAIL - Dimensions would cause oversized box!  WILL NOT PUSH TO NS!", 
+          IF(GT(VALUE("Length 4"), len_cap), "ERROR - Length 4 is greater than 108 inches!  WILL NOT PUSH TO NS!",
+            IF(GT(VALUE("WWeight 4"), WWeight_threshold), "FAIL - WWeight 4 exceeds 150 lbs!  WILL NOT PUSH TO NS!", "PASS")))))) in
+
+IF(AND(EQUAL(box1,"PASS"),EQUAL(box2,"PASS"),EQUAL(box3,"PASS"),EQUAL(box4,"PASS")), "PASS", 
+	IF(NOT(EQUAL(box1, "PASS")), box1, 
+		IF(NOT(EQUAL(box2, "PASS")), box2, 
+			IF(NOT(EQUAL(box3, "PASS")), box3,
+				IF(NOT(EQUAL(box4, "PASS")), box4)))))
+##
+
+#SKU & SKU Aliases for AMZN#
+#Joins the inventory number with the Amazon SKU alias#
+CONCAT_ARRAYS(VALUE("Inventory Number"),VALUES("Amazon SKU Alias"))
+##
+
+#SKU & SKU Aliases for CA#
+#Joins the inventory number with the Channel Advisor SKU alias#
+CONCAT_ARRAYS(VALUE("Inventory Number"), VALUES("Channel Advisor SKU Alias"))
+##
+
+#Description (Cleaned)#
+#Removes special characters and ellipses in the description#
+let desc = SUBSTITUTE(VALUE("Description"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+#Removing ellipses
+let desc = SUBSTITUTE(desc,"…","...") in
+
+let desc = CLEAN_TEXT(desc) in
+ let desc = SUBSTITUTE(desc ,"&quot;","") in 
+ let desc = SUBSTITUTE(desc ,"(H)","\"(H)") in 
+ let desc = SUBSTITUTE(desc ,"(W)","\"(W)") in 
+ let desc = SUBSTITUTE(desc ,"(L)","\"(L)") in 
+ let desc = SUBSTITUTE(desc ,"\"\"","\"") in 
+ let desc = SUBSTITUTE(desc, "", "\n") in
+ desc
+##
+
+#Short Description (Cleaned)#
+#Removes special characters in the description#
+let desc = SUBSTITUTE(VALUE("Short Description"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+let desc = SUBSTITUTE(desc, "", "\n") in
+
+CLEAN_TEXT(desc)
+##
+
+#Amazon Product Description (Cleaned)#
+#Removes special characters and ellipses in the description#
+let desc = SUBSTITUTE(VALUE("Amazon Product Description"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+#Removing ellipses
+let desc = SUBSTITUTE(desc,"…","...") in
+
+let desc = STRIP_HTML(CLEAN_TEXT(desc)) in
+let desc = CLEAN_TEXT(desc) in
+
+let desc = SUBSTITUTE(desc ,"<p>","") in
+let desc = SUBSTITUTE(desc ,"<li>","") in
+let desc = SUBSTITUTE(desc ,"</p>","") in
+let desc = SUBSTITUTE(desc ,"</li>","") in
+let desc = SUBSTITUTE(desc ,"&quot;","") in
+let desc = SUBSTITUTE(desc ,"(H)","\"(H)") in
+let desc = SUBSTITUTE(desc ,"(W)","\"(W)") in
+let desc = SUBSTITUTE(desc ,"(L)","\"(L)") in
+let desc = SUBSTITUTE(desc ,"\"\"","\"") in
+let desc = SUBSTITUTE(desc, "<", "&lessthan;") in
+let desc = SUBSTITUTE(desc, ">", "&greaterthan;") in
+let desc = SUBSTITUTE(desc, "", "\n") in
+desc
+##
+
+#Jet Bullets (Cleaned)#
+#Removes special characters in the bullets#
+let desc = SUBSTITUTE(VALUE("Jet Bullets"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+let desc = SUBSTITUTE(desc, "", "\n") in
+
+STRIP_HTML(CLEAN_TEXT(desc))
+##
+
+#Amazon Features (Cleaned)#
+#Joins features in a list and removes special characters in the features
+let feat = CONCAT_ARRAYS(VALUE("Amazon Feature 1"), 
+  VALUE("Amazon Feature 2"), 
+  VALUE("Amazon Feature 3"), 
+  VALUE("Amazon Feature 4"), 
+  VALUE("Amazon Feature 5")) in
+  
+let feat = SUBSTITUTE(feat,"\”","\"") in
+let feat = SUBSTITUTE(feat,"\“","\"") in
+let feat = SUBSTITUTE(feat,"‘","'") in
+let feat = SUBSTITUTE(feat,"’","'") in
+let feat = SUBSTITUTE(feat,"—","-") in
+
+#Removing french accents
+let feat = SUBSTITUTE(feat,"ç","c") in
+let feat = SUBSTITUTE(feat,"é","e") in
+let feat = SUBSTITUTE(feat,"â","a") in
+let feat = SUBSTITUTE(feat,"ê","e") in
+let feat = SUBSTITUTE(feat,"î","i") in
+let feat = SUBSTITUTE(feat,"ô","o") in
+let feat = SUBSTITUTE(feat,"û","u") in
+let feat = SUBSTITUTE(feat,"à","a") in
+let feat = SUBSTITUTE(feat,"è","e") in
+let feat = SUBSTITUTE(feat,"ù","u") in
+let feat = SUBSTITUTE(feat,"ë","e") in
+let feat = SUBSTITUTE(feat,"ï","i") in
+let feat = SUBSTITUTE(feat,"ü","u") in
+
+
+let feat = STRIP_HTML(CLEAN_TEXT(feat)) in
+let feat = SUBSTITUTE(feat ,"&quot;","") in 
+let feat = SUBSTITUTE(feat ,"(H)","\"(H)") in 
+let feat = SUBSTITUTE(feat ,"(W)","\"(W)") in 
+let feat = SUBSTITUTE(feat ,"(L)","\"(L)") in 
+let feat = SUBSTITUTE(feat ,"\"\"","\"") in 
+let feat = SUBSTITUTE(feat, "", "\n") in
+feat
+##
+
+#Auction Title (Cleaned)#
+#Removes BESTCHOICEPRODUCTS, BCP, and special characters from the auction title# 
+let desc = SUBSTITUTE(VALUE("Auction Title"),"\”","\"") in
+let desc = SUBSTITUTE(desc,"\“","\"") in
+let desc = SUBSTITUTE(desc,"‘","'") in
+let desc = SUBSTITUTE(desc,"’","'") in
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+let desc = SUBSTITUTE(desc, "_x000D_", "\n") in
+
+let title = SUBSTITUTE(UPPER(desc), "BEST CHOICE PRODUCTS", "") in
+let title = SUBSTITUTE(title, "BCP", "") in 
+let title = SUBSTITUTE(title, "BESTCHOICEPRODUCTS", "") in 
+CLEAN_TEXT(PROPER(title))
+#CLEAN_TEXT(desc)
+##
+
+#Amazon Picture Urls#
+#Gets images from Dropbox and uploads them in order. Adds 1 to ITEMIMAGEURL so it corresponds to the image order# 
+let images = EACH(VALUES("Dropbox Image URLs"), (image) => 
+  IF(CONTAINS(UPPER(image), "LRG-"), 
+    CONCATENATE(image))) in
+    
+let images_exist = IF(NOT(EQUAL(images, NULL)), true, false) in
+
+let images = SUBSTITUTE(images, "?dl=0", "") in
+let images = SUBSTITUTE(images, "dropbox", "dl.dropboxusercontent") in 
+
+let images1 = AT(images, 1) in
+let images2 = AT(images, 2) in
+let images3 = AT(images, 3) in
+let images4 = AT(images, 4) in
+let images5 = AT(images, 5) in
+let images6 = AT(images, 6) in
+let images7 = AT(images, 7) in
+let images8 = AT(images, 8) in
+let images9 = AT(images, 9) in
+
+IF (images_exist,
+CONCAT_ARRAY(
+    CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images1), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images1),
+	
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images2), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images2),
+	
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images3), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images3),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images4), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images4),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images5), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images5),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images6), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images6),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images7), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images7),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images8), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images8),
+
+CONCATENATE("ITEMIMAGEURL", 
+	TEXT(ADD(REPLACE(REPLACE(UPPER(images9), ".*LRG-",""), "[^0-9]", ""), 1), "0.")," ", images9)
+	)
+, NULL)
+##
+
+#Inventory Number (Cleaned)#
+#Removes spaces in inventory numbers and make it uppercase if it's not already so#
+UPPER(SUBSTITUTE(VALUE("Inventory Number"), " ", ""))
+##
+
+#Dropbox Image URLs (Cleaned)#
+#Removes ?dl=0 and www. from the URL and replaces dropbox with dl.dropboxusercontent and https with http#
+let urls = SUBSTITUTE(VALUES("Dropbox Image URLs"), "?dl=0", "") in
+let urls = SUBSTITUTE(urls, "dropbox", "dl.dropboxusercontent") in 
+let urls = SUBSTITUTE(urls, "https", "http") in
+let urls = SUBSTITUTE(urls, "www.", "") in
+urls
+##
+
+#Shopify Product Tag (Computed)#
+#Checks that super department, shopify category, subcategory, and type isn't blank and formats the hierarchy#
+let sup_dep_is_null = IF(EQUAL(VALUE("Super Department"), ""), true, false) in
+let sh_cat_is_null = IF(EQUAL(VALUE("Shopify Category"), ""), true, false) in
+let sh_sub_cat_is_null = IF(EQUAL(VALUE("Shopify Subcategory"), ""), true, false) in
+let sh_type_is_null = IF(EQUAL(VALUE("Shopify Type"), ""), true, false) in
+
+let sh_cat = SUBSTITUTE(VALUE("Shopify Category"), "  ", " ") in
+
+let sh_prd_tag = CONCATENATE("hierarchy:", 
+  SUBSTITUTE(VALUE("Super Department"), " ", "_"), "/", 
+  SUBSTITUTE(sh_cat, "_"), "/", 
+  SUBSTITUTE(VALUE("Shopify Subcategory"), " ", "_"), "/", 
+  SUBSTITUTE(VALUE("Shopify Type"), " ", "_")) in
+  
+let sh_prd_tag = IF(CONTAINS(sh_prd_tag, "//"), NULL, sh_prd_tag) in
+let sh_prd_tag = IF(CONTAINS(sh_prd_tag, "hierarchy:/"), NULL, sh_prd_tag) in
+
+sh_prd_tag
+##
+
+#Shopify Tag Data (Integration)#
+#Formats the hierarchy and makes sure it's not blank#
+let sh_prd_tag_data_A = VALUE("Shopify Tag Data") in
+let sh_prd_tag_data_B = CONCATENATE("hierarchy:", 
+                        SUBSTITUTE(VALUE("Super Department"), " ", "_"), "/", 
+                        SUBSTITUTE(VALUE("Shopify Category"), " ", "_"), "/", 
+                        SUBSTITUTE(VALUE("Shopify Subcategory"), " ", "_"), "/", 
+                        SUBSTITUTE(VALUE("Shopify Type"), " ", "_")) in   
+                        
+let sh_prd_tag_data_B = IF(CONTAINS(sh_prd_tag_data_B, "//"), NULL, sh_prd_tag_data_B) in
+let sh_prd_tag_data_B = IF(CONTAINS(sh_prd_tag_data_B, "hierarchy:/"), NULL, sh_prd_tag_data_B) in
+let sh_prd_tag_data_B = SUBSTITUTE(sh_prd_tag_data_B, ",", "") in
+
+let sh_prd_tag_data = IF(AND(NOT(EQUAL(sh_prd_tag_data_A, NULL)), NOT(EQUAL(sh_prd_tag_data_B, NULL))),
+                      CONCATENATE(sh_prd_tag_data_B, ",", sh_prd_tag_data_A),  
+                        IF(NOT(EQUAL(sh_prd_tag_data_A, NULL)),sh_prd_tag_data_A,
+                          IF(NOT(EQUAL(sh_prd_tag_data_B, NULL)),sh_prd_tag_data_B))) in
+sh_prd_tag_data
+##
+
+#id#
+#Removes spaces in inventory numbers and make it uppercase if it's not already so#
+SUBSTITUTE(UPPER(VALUE("Inventory Number"))," ", "")
+##
+
+#title#
+#Removes any special and/or hidden characters in the shopify title#
+CLEAN_TEXT(VALUE("Shopify Title"))
+##
+
+#description#
+#Removes new lines and tabs in the description#
+let desc = STRIP_HTML(CLEAN_TEXT(VALUE("Description"))) in
+let desc = REPLACE(desc, "\r\n", "\n") in 
+let desc = REPLACE(desc, "\n", ";") in
+let desc = REPLACE(desc,"\t", "") in
+desc
+##
+
+#price#
+#Sets shopify promo price as price, if empty, use the seller cost#
+let cost1 = VALUE("Shopify Promo Price") in
+let cost2 = VALUE("Seller Cost") in
+COALESCE(cost1, cost2)
+##
+
+#condition#
+#Sets the condition to new#
+CONCATENATE("New")
+##
+
+#brand#
+#Adds Best Choice Products to the brand#
+CONCATENATE("Best Choice Products")
+##
+
+#link#
+#
+let shopify_product_url = SUBSTITUTE(VALUE("ShopifyProductURL"),"myshopify.","") in 
+shopify_product_url
+
+let shopify_title_cleaned = REPLACE(VALUE("Shopify Title"), "[-,\"']", " ") in 
+let shopify_title_cleaned = SUBSTITUTE(shopify_title_cleaned, "/", " ") in 
+let shopify_title_cleaned = REPLACE(shopify_title_cleaned, "[ ]", "-") in 
+let shopify_url = CONCATENATE("https://bestchoiceproducts.com/products/best-choice-products/", shopify_title_cleaned) in 
+IF(NOT(EQUAL(shopify_product_url, NULL)),shopify_product_url, shopify_url)
+##
+
+#gtin#
+#Uses UPC for gtin, if empty, use UPC 1#
+let upc1 = VALUE("UPC") in
+let upc2 = VALUE("UPC 1") in 
+COALESCE(upc1,upc2)
+##
+
+#image_link#
+#Makes image links robot-parsable#
+let image1 = VALUE("ITEMIMAGEURL2") in 
+
+let urls = SUBSTITUTE(VALUES("Dropbox Image URLs"), "?dl=0", "") in
+let urls = SUBSTITUTE(urls, "dropbox", "dl.dropboxusercontent") in 
+let image2 = AT(urls, 1) in
+
+let image_url = IF(NOT(EQUAL(image1, NULL)), image1, image2) in
+
+IF(CONTAINS(image_url, "salsify"),
+  SUBSTITUTE(image_url,"images.salsify.com/image", "res.cloudinary.com/hdtsjhzsw/image"), image_url)
+##
+
+#availability#
+#Checks if there's quantity#
+let avail = IF(GT(VALUE("Total Quantity"), 0), "in stock", "out of stock") in
+avail
+##
+
+#product_type#
+#Gets product type#
+let t = CONCATENATE(VALUE("Amazon Keyword 1"), ", ", VALUE("Amazon Keyword 2"), ", ", VALUE("Amazon Keyword 3"), ", ", 
+VALUE("Amazon Keyword 4"), ", ", VALUE("Amazon Keyword 5")) IN
+let t = LTRIM(t, 90) in
+let t = REPLACE(t, "(,)\\s*$", "") in
+
+
+let no_comma = CONCATENATE(VALUE("Amazon Keyword 1"), VALUE("Amazon Keyword 2"),VALUE("Amazon Keyword 3"), 
+VALUE("Amazon Keyword 4"),  VALUE("Amazon Keyword 5")) IN
+
+let m_type = VALUE("product_type (manual)") in 
+
+let s_type = VALUE("Shopify Type") in
+
+let t = IF(AND(NOT(EQUAL(m_type, NULL)), NOT(EQUAL(m_type, ""))), m_type, 
+  IF(AND(NOT(EQUAL(no_comma, NULL)), NOT(EQUAL(no_comma, ""))), t, s_type)) in
+
+t
+##
+
+#shipping_weight#
+#Sets to Wweight 1#
+VALUE("WWeight 1")
+##
+
+#color#
+#Sets to Amazon color#
+VALUE("Amazon Color")
+##
+
+#age_group#
+#Sets to age group#
+VALUE("Age Group")
+##
+
+#additional_image_link#
+#Adds additional images#
+let image1 = VALUE("ITEMIMAGEURL3") in 
+
+let urls = SUBSTITUTE(VALUES("Dropbox Image URLs"), "?dl=0", "") in
+let urls = SUBSTITUTE(urls, "dropbox", "dl.dropboxusercontent") in 
+let image2 = AT(urls, 2) in
+
+let image_url = IF(NOT(EQUAL(image1, NULL)), image1, image2) in
+image_url
+##
+
+#material#
+#Sets to Material, if empty, use Product Material#
+let mat1 = VALUE("Material") in
+let mat2 = VALUE("Product Material") in 
+IF(NOT(EQUAL(mat1, NULL)), mat1, mat2)
+##
+
+#quantity#
+#Set to total quantity#
+VALUE("Total Quantity")
+##
+
+#manufacturer#
+#Sets to Best Choice Products#
+CONCATENATE("Best Choice Products")
+##
+
+#multipack#
+#Checks if it's a multipack#
+IF(OR(CONTAINS(VALUE("Packaging Type"), "ack"), CONTAINS(VALUE("Packaging Type"), "box")), true, false)
+##
+
+#shipping_height#
+#Sets to height 1#
+VALUE("Height 1")
+##
+
+#shipping_length#
+#Sets to length 1#
+VALUE("Length 1")
+##
+
+#shipping_width#
+#Sets to width 1#
+VALUE("Width 1")
+##
+
+#Approver for POs#
+#Set to category manager#
+VALUE("Category Manager")
+##
+
+#Shopify Title (Cleaned)#
+#Removes special characters and extra lines#
+let desc = SUBSTITUTE(VALUE("Shopify Title"),"\”","\"") in 
+let desc = SUBSTITUTE(desc,"\“","\"") in 
+let desc = SUBSTITUTE(desc,"‘","'") in 
+let desc = SUBSTITUTE(desc,"’","'") in 
+let desc = SUBSTITUTE(desc,"—","-") in
+
+#Removing french accents
+let desc = SUBSTITUTE(desc,"ç","c") in
+let desc = SUBSTITUTE(desc,"é","e") in
+let desc = SUBSTITUTE(desc,"â","a") in
+let desc = SUBSTITUTE(desc,"ê","e") in
+let desc = SUBSTITUTE(desc,"î","i") in
+let desc = SUBSTITUTE(desc,"ô","o") in
+let desc = SUBSTITUTE(desc,"û","u") in
+let desc = SUBSTITUTE(desc,"à","a") in
+let desc = SUBSTITUTE(desc,"è","e") in
+let desc = SUBSTITUTE(desc,"ù","u") in
+let desc = SUBSTITUTE(desc,"ë","e") in
+let desc = SUBSTITUTE(desc,"ï","i") in
+let desc = SUBSTITUTE(desc,"ü","u") in
+
+let desc = SUBSTITUTE(desc, "", "\n") in
+
+let desc = CLEAN_TEXT(desc) in
+desc
+##
+
+#Shopify Image URLs#
+#Gets images from Dropbox and uploads them in order#
+let images = EACH(VALUES("Dropbox Image URLs"), (image) => 
+  IF(CONTAINS(UPPER(image), "LRG-"), 
+    image, NULL)) in
+
+
+let images = SUBSTITUTE(images, "?dl=0", "") in
+let images = SUBSTITUTE(images, "dropbox", "dl.dropboxusercontent") in 
+
+let images1 = AT(images, 1) in
+let images2 = AT(images, 2) in
+let images3 = AT(images, 3) in
+let images4 = AT(images, 4) in
+let images5 = AT(images, 5) in
+let images6 = AT(images, 6) in
+let images7 = AT(images, 7) in
+let images8 = AT(images, 8) in
+let images9 = AT(images, 9) in
+
+let images_arr1 = 
+	COMPACT(
+	CONCAT_ARRAYS(
+    CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images1), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images1),
+		
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images2), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images2),
+
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images3), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images3),
+		
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images4), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images4),
+		
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images5), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images5),
+		
+	CONCATENATE( 
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images6), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images6),
+		
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images7), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images7),
+		
+	CONCATENATE( 
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images8), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images8),
+		
+	CONCATENATE(
+		TEXT(ADD(REPLACE(REPLACE(UPPER(images9), ".*LRG-",""), "[^0-9]", ""), 0), "0.")," ", images9)
+		)) in
+let images_arr1 = REPLACE(images_arr1, "[ ]$", "") in
+
+let images_arr2 = 
+CONCAT_ARRAYS(
+  VALUE("ITEMIMAGEURL1"),
+  VALUE("ITEMIMAGEURL2"), 
+  VALUE("ITEMIMAGEURL3"), 
+  VALUE("ITEMIMAGEURL4"), 
+  VALUE("ITEMIMAGEURL5"), 
+  VALUE("ITEMIMAGEURL6"), 
+  VALUE("ITEMIMAGEURL7"), 
+  VALUE("ITEMIMAGEURL8"), 
+  VALUE("ITEMIMAGEURL9")
+  )  in
+
+IF(LT(LENGTH(images_arr1), 2), images_arr2, images_arr1)
+##
+
+#custom_label_0 (computed)#
+#Sets to custom label 0#
+VALUE("custom_label_0")
+##
+
+#custom_label_1 (computed)#
+#Sets to custom label 1, if empty, use normal SKU#
+IF(NOT(EQUAL(VALUE("custom_label_1"), NULL)), VALUE("custom_label_1"), "Normal SKU")
+##
+
+#custom_label_2 (computed)#
+#Calculates the profit margin#
+let sku_x = MULTIPLY(VALUE("Unit Cost"), ADD("1", VALUE("Duties"))) in
+let sku_y = DIVIDE("3950", VALUE("SKUs per container")) in
+
+let profit_margin = ROUND(DIVIDE(SUBTRACT(MULTIPLY(VALUE("Seller Cost"),
+  SUBTRACT("1", ".15")), ADD(ADD(sku_x,sku_y), 
+    VALUE("Outbound Shipping Price"))), VALUE("Seller Cost")), 4) in     
+
+let profit_margin = ROUND(MULTIPLY(profit_margin, 100), 2) in  
+
+let label = 
+IF(LT(profit_margin, "11.99"), "Lowest Margin",
+  IF(AND(GT(profit_margin, "11.99"),LT(profit_margin, "15.99")), "Low Margin",
+    IF(AND(GT(profit_margin, "15.99"), LT(profit_margin, "22.99")), "Mid Margin",
+      IF(AND(GT(profit_margin, "22.99"), LT(profit_margin, "27.99")), "High Margin",
+        IF(GT(profit_margin, "27.99"), "Highest Margin"))))) in
+label
+##
+
+#custom_label_3 (computed)#
+#Sets to custom label 3, if empty, use normal SKU#
+#IF(NOT(EQUAL(VALUE("custom_label_3"), NULL)), VALUE("custom_label_3"), "Normal SKU")
+VALUE("custom_label_3")
+##
+
+#custom_label_4 (computed)#
+#Sets to custom label 4, if empty, use normal SKU#
+#IF(NOT(EQUAL(VALUE("custom_label_4"), NULL)), VALUE("custom_label_4"), "Normal SKU")
+VALUE("custom_label_4")
+##
+
+#Product Status (Computed)#
+#Sets status to inactive if there's no quantity or status is DNR, and sets status to active if status is new and there's a launch date#
+let prd_stat = IF(AND(
+                    EQUAL(
+                      VALUE("Total Quantity"), 0), 
+                    CONTAINS(
+                      VALUE("Product Status"), "Do Not Reorder")), 
+                  "Inactive", 
+                  VALUE("Product Status")) in
+
+let prd_stat = IF(AND(
+                    EQUAL(
+                      "New", VALUE("Product Status")),
+                    NOT(EQUAL(
+                      VALUE("Launch Date"), NULL))),
+                  "Active",
+                  VALUE("Product Status")) in
+
+prd_stat
+##
+
+#Is Non-Con (Computed)#
+#Checks if boxes fit on conveyor belt#
+let box1 = IF(OR
+  (GT(VALUE("Length 1"), 48), 
+  GT(VALUE("Width 1"), 30), 
+  GT(VALUE("Height 1"), 30), 
+  GT(VALUE("WWeight 1"), 70)), "Yes", "No") in
+  
+let box2 = IF(OR
+  (GT(VALUE("Length 2"), 48), 
+  GT(VALUE("Width 2"), 30), 
+  GT(VALUE("Height 2"), 30), 
+  GT(VALUE("WWeight 2"), 70)), "Yes", "No") in  
+  
+let box3 = IF(OR
+  (GT(VALUE("Length 3"), 48), 
+  GT(VALUE("Width 3"), 30), 
+  GT(VALUE("Height 3"), 30), 
+  GT(VALUE("WWeight 3"), 70)), "Yes", "No") in    
+  
+let box4 = IF(OR
+  (GT(VALUE("Length 4"), 48), 
+  GT(VALUE("Width 4"), 30), 
+  GT(VALUE("Height 2"), 30), 
+  GT(VALUE("WWeight 4"), 70)), "Yes", "No") in  
+  
+let non_con = CONCATENATE(box1, box2, box3, box4) in 
+
+let non_con = IF(CONTAINS(non_con, "Yes"), "Yes", "No") in 
+
+let man_non_con = VALUE("Is Non-Con") in
+
+IF(EQUAL(non_con, "Yes"), "Yes", 
+  IF(EQUAL(man_non_con, "Yes"), 
+    "Yes", "No"))
+##
+
+#Pricing Matrix#
+#Calculates employee pricing#
+let ten_percent = MULTIPLY(VALUE("Unit Cost"), "0.10") in 
+let out_ship = COALESCE(VALUE("Outbound Shipping Price"), VALUE("Outbound Shipping Cost"), "0") in 
+let emp_price = ADD(VALUE("Unit Cost"), ten_percent, out_ship) in 
+let emp_price = ROUND(emp_price, 2) in
+
+CONCAT_ARRAYS(
+  CONCATENATE(
+    "Markeplaces",
+    ",",
+    VALUE("Seller Cost")),
+  CONCATENATE(
+    "Employee",
+    ",",
+    emp_price)
+  )
+##
+
+#Shopify Description#
+#Adds prompts to shopify description when flags are raised#
+let hygiene = CONCATENATE("It's not personal--it's hygiene! This item is considered final sale and cannot be returned once opened.") in
+##
+
+#if value of Final Sales Warning = Yes, concatenate the value of Description with "hygiene
+
+let hygiene =
+IF(
+  EQUAL(VALUE("Final Sale Warning"), "Yes"),
+    CONCATENATE(VALUE("Description"), "<br />" , hygiene),
+      VALUE("Description")
+) in
+
+
+let multi_box =
+IF(
+  GT(VALUE("# of boxes"), "1"), 
+    CONCATENATE("Ships and arrives in ", VALUE("# of boxes"), " separate boxes.")
+) in
+
+CONCATENATE(hygiene, "<br />", multi_box)
+##
+
+#Product Class (Computed)#
+#Joins the super department with the subcategory#
+let prod_class = CONCATENATE(VALUE("Super Department"), " : ", VALUE("Shopify Subcategory")) in
+IF(
+  OR(
+    EQUAL(VALUE("Shopify Subcategory"), NULL), 
+    EQUAL(VALUE("Super Department"), NULL)), NULL, prod_class
+)
